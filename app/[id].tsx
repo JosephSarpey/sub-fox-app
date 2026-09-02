@@ -5,7 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const SubscriptionDetails = () => {
   const { id } = useLocalSearchParams<{ id: string }>();
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView className="flex-1 bg-background p-5">
       <Text>Subscription Details: {id}</Text>
       <Link href="/(tabs)/index">
         <Text>Go Back</Text>
