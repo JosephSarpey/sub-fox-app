@@ -1,16 +1,18 @@
 import { Link, useLocalSearchParams } from "expo-router";
-import { Text, View } from "react-native";
+import { Text } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const SubscriptionDetails = () => {
   const { id } = useLocalSearchParams<{ id: string }>();
   return (
-    <View>
+    <SafeAreaView style={{ flex: 1 }}>
       <Text>Subscription Details: {id}</Text>
       <Link href="/(tabs)/index">
         <Text>Go Back</Text>
       </Link>
-    </View>
+    </SafeAreaView>
   );
 };
 
 export default SubscriptionDetails;
+
