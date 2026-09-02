@@ -1,6 +1,7 @@
 import { tabs } from "@/constants/data";
 import { colors, components } from "@/constants/theme";
 import { Tabs } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { Image, View } from "react-native";
 import {
   SafeAreaView,
@@ -22,7 +23,8 @@ const TabLayout = () => {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={["top", "left", "right"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["top", "left", "right"]}>
+    <StatusBar style="dark" />
     <Tabs
       screenOptions={{
         headerShown: false,
