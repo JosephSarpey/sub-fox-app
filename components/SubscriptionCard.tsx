@@ -1,3 +1,4 @@
+/* eslint-disable import/no-named-as-default */
 import {
   formatCurrency,
   formatStatusLabel,
@@ -48,13 +49,13 @@ const SubscriptionCard = ({
         </View>
       </View>
       {expanded && (
-        <View className="sub-bdy">
+        <View className="sub-body">
           <View className="sub-details">
             <View className="sub-row">
               <View className="sub-row-copy">
                 <Text className="sub-label">Payment:</Text>
                 <Text
-                  className="sub-calue"
+                  className="sub-value"
                   numberOfLines={1}
                   ellipsizeMode="tail"
                 >
@@ -66,7 +67,7 @@ const SubscriptionCard = ({
               <View className="sub-row-copy">
                 <Text className="sub-label">Category:</Text>
                 <Text
-                  className="sub-calue"
+                  className="sub-value"
                   numberOfLines={1}
                   ellipsizeMode="tail"
                 >
@@ -78,7 +79,7 @@ const SubscriptionCard = ({
               <View className="sub-row-copy">
                 <Text className="sub-label">Started:</Text>
                 <Text
-                  className="sub-calue"
+                  className="sub-value"
                   numberOfLines={1}
                   ellipsizeMode="tail"
                 >
@@ -90,7 +91,7 @@ const SubscriptionCard = ({
               <View className="sub-row-copy">
                 <Text className="sub-label">Renewal date:</Text>
                 <Text
-                  className="sub-calue"
+                  className="sub-value"
                   numberOfLines={1}
                   ellipsizeMode="tail"
                 >
@@ -101,7 +102,7 @@ const SubscriptionCard = ({
                 <View className="sub-row-copy">
                   <Text className="sub-label">Status:</Text>
                   <Text
-                    className="sub-calue"
+                    className="sub-value"
                     numberOfLines={1}
                     ellipsizeMode="tail"
                   >
