@@ -9,6 +9,7 @@ import {
 import { icons } from "@/constants/icons";
 import images from "@/constants/images";
 import "@/global.css";
+import { posthog } from "@/lib/posthog";
 import { formatCurrency } from "@/lib/utils";
 import { useUser } from "@clerk/expo";
 import dayjs from "dayjs";
@@ -93,9 +94,16 @@ export default function App() {
             {...item}
             expanded={expandedSubscriptionId === item.id}
             onPress={() =>
-              setExpandedSubscriptionId((currentId) =>
-                currentId === item.id ? null : item.id,
-              )
+              setExpandedSubscriptionId((currentId) => {
+                if (currentId !== item.id) {
+                  posthog?.capture("subscription_expanded", {
+                    subscription_id: item.id,
+                    billing_interval: item.billing ?? null,
+                    subscription_status: item.status ?? null,
+                  });
+                }
+                return currentId === item.id ? null : item.id;
+              })
             }
           />
         )}

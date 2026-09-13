@@ -1,5 +1,6 @@
 import { useSignIn, useAuth } from "@clerk/expo";
 import { useRouter } from "expo-router";
+import { posthog } from "@/lib/posthog";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -206,6 +207,7 @@ export default function ForgotPasswordScreen() {
 
       if (signIn.status === "complete") {
         await signIn.finalize();
+        posthog?.capture("password_reset_completed");
         // Auth guard in _layout.tsx will redirect to tabs automatically
       } else {
         setErrorMsg("Something went wrong. Please try again.");

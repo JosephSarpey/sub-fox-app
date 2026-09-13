@@ -1,5 +1,6 @@
 import { useSignIn, useAuth } from "@clerk/expo";
 import { Link } from "expo-router";
+import { posthog } from "@/lib/posthog";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
@@ -89,7 +90,10 @@ export default function SignInScreen() {
 
       if (finalizeError) {
         setErrorMsg(getSafeErrorMessage(finalizeError));
+        return;
       }
+
+      posthog?.capture("sign_in_completed");
 
       // If successful, useAuth automatically updates and layout redirects
     } catch (err: unknown) {
