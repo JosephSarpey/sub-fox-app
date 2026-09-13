@@ -13,29 +13,46 @@ import {
 } from "react-native";
 
 /** Map Clerk error codes to user-safe messages. */
+function clerkCodeToMessage(code: string | undefined): string | null {
+  switch (code) {
+    case "form_identifier_exists":
+      return "An account with this email already exists. Try signing in instead.";
+    case "form_password_pwned":
+      return "This password has been found in a data breach. Please choose a different one.";
+    case "form_password_length_too_short":
+      return "Password must be at least 8 characters long.";
+    case "form_param_format_invalid":
+      return "Please enter a valid email address.";
+    case "form_code_incorrect":
+      return "Incorrect verification code. Please try again.";
+    case "verification_expired":
+      return "Verification code has expired. Please request a new one.";
+    case "too_many_attempts":
+      return "Too many attempts. Please wait a moment and try again.";
+    default:
+      return null;
+  }
+}
+
 function getSafeErrorMessage(err: unknown): string {
-  if (err && typeof err === "object" && "errors" in err) {
-    const clerkErr = (err as { errors: { code: string }[] }).errors?.[0];
-    switch (clerkErr?.code) {
-      case "form_identifier_exists":
-        return "An account with this email already exists. Try signing in instead.";
-      case "form_password_pwned":
-        return "This password has been found in a data breach. Please choose a different one.";
-      case "form_password_length_too_short":
-        return "Password must be at least 8 characters long.";
-      case "form_param_format_invalid":
-        return "Please enter a valid email address.";
-      case "form_code_incorrect":
-        return "Incorrect verification code. Please try again.";
-      case "verification_expired":
-        return "Verification code has expired. Please request a new one.";
-      case "too_many_attempts":
-        return "Too many attempts. Please wait a moment and try again.";
-      default:
-        return "Something went wrong. Please try again.";
+  if (err && typeof err === "object") {
+    // ClerkError (Future API) — has .code directly
+    if ("code" in err && typeof (err as { code: unknown }).code === "string") {
+      const msg = clerkCodeToMessage((err as { code: string }).code);
+      if (msg) return msg;
+    }
+    // Legacy ClerkAPIResponseError — has .errors[] array
+    if ("errors" in err) {
+      const clerkErr = (err as { errors: { code: string }[] }).errors?.[0];
+      const msg = clerkCodeToMessage(clerkErr?.code);
+      if (msg) return msg;
     }
   }
   if (err instanceof Error) {
+    // ClerkError extends Error; use longMessage if available, else message
+    if ("longMessage" in err && typeof (err as { longMessage: unknown }).longMessage === "string") {
+      return (err as { longMessage: string }).longMessage;
+    }
     return err.message;
   }
   return "Something went wrong. Please try again.";
@@ -138,14 +155,26 @@ export default function SignUpScreen() {
     setLoading(true);
 
     try {
-      await signUp.password({
+      const { error: passwordError } = await signUp.password({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         emailAddress: emailAddress.trim(),
         password,
       });
 
-      await signUp.verifications.sendEmailCode();
+      if (passwordError) {
+        if (__DEV__) console.warn("[SignUp Error]", passwordError);
+        setErrorMsg(getSafeErrorMessage(passwordError));
+        return;
+      }
+
+      const { error: sendError } = await signUp.verifications.sendEmailCode();
+
+      if (sendError) {
+        if (__DEV__) console.warn("[SignUp SendCode Error]", sendError);
+        setErrorMsg(getSafeErrorMessage(sendError));
+        return;
+      }
 
       setPendingVerification(true);
       startCooldown(60);
@@ -170,8 +199,21 @@ export default function SignUpScreen() {
     setLoading(true);
 
     try {
-      await signUp.verifications.verifyEmailCode({ code: code.trim() });
-      await signUp.finalize();
+      const { error: verifyError } = await signUp.verifications.verifyEmailCode({ code: code.trim() });
+
+      if (verifyError) {
+        if (__DEV__) console.warn("[Verify Error]", verifyError);
+        setErrorMsg(getSafeErrorMessage(verifyError));
+        return;
+      }
+
+      const { error: finalizeError } = await signUp.finalize();
+
+      if (finalizeError) {
+        if (__DEV__) console.warn("[Finalize Error]", finalizeError);
+        setErrorMsg(getSafeErrorMessage(finalizeError));
+        return;
+      }
     } catch (err: unknown) {
       if (__DEV__) {
         console.warn("[Verify Error]", err);
@@ -187,7 +229,14 @@ export default function SignUpScreen() {
 
     setErrorMsg("");
     try {
-      await signUp.verifications.sendEmailCode();
+      const { error: resendError } = await signUp.verifications.sendEmailCode();
+
+      if (resendError) {
+        if (__DEV__) console.warn("[Resend Error]", resendError);
+        setErrorMsg(getSafeErrorMessage(resendError));
+        return;
+      }
+
       startCooldown(60);
     } catch (err: unknown) {
       if (__DEV__) {
