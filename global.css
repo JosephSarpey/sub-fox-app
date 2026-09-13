@@ -431,4 +431,82 @@
   .category-chip-text-active {
     @apply text-accent;
   }
+
+  /* ── Settings Screen ─────────────────────────── */
+
+  .settings-content {
+    @apply px-5 pb-12 pt-4;
+  }
+
+  .settings-page-title {
+    @apply mb-6 text-3xl font-sans-bold text-primary;
+  }
+
+  .settings-profile-card {
+    @apply mb-6 flex-row items-center gap-4 rounded-3xl border border-border bg-card p-5;
+  }
+
+  .settings-avatar {
+    @apply size-20 rounded-full;
+  }
+
+  .settings-profile-info {
+    @apply min-w-0 flex-1;
+  }
+
+  .settings-name {
+    @apply text-xl font-sans-bold text-primary;
+  }
+
+  .settings-email {
+    @apply mt-0.5 text-sm font-sans-medium text-muted-foreground;
+  }
+
+  .settings-member-since {
+    @apply mt-1 text-xs font-sans-medium text-muted-foreground;
+  }
+
+  .settings-section {
+    @apply mb-5;
+  }
+
+  .settings-section-title {
+    @apply mb-2 text-xs font-sans-semibold uppercase tracking-[1px] text-muted-foreground;
+  }
+
+  .settings-card {
+    @apply rounded-2xl border border-border bg-card px-4;
+  }
+
+  .settings-row {
+    @apply flex-row items-center justify-between py-4;
+  }
+
+  .settings-row-label {
+    @apply shrink-0 text-sm font-sans-medium text-muted-foreground;
+  }
+
+  .settings-row-value {
+    @apply ml-4 flex-1 text-right text-sm font-sans-semibold text-primary;
+  }
+
+  .settings-row-value-mono {
+    @apply ml-4 flex-1 text-right text-xs font-sans-medium text-muted-foreground;
+  }
+
+  .settings-divider {
+    @apply h-px bg-border;
+  }
+
+  .settings-signout-button {
+    @apply mt-4 items-center rounded-2xl border border-destructive/30 bg-destructive/8 py-4;
+  }
+
+  .settings-signout-disabled {
+    @apply bg-destructive/4;
+  }
+
+  .settings-signout-text {
+    @apply text-base font-sans-bold text-destructive;
+  }
 }
