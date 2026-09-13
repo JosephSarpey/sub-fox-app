@@ -4,25 +4,28 @@ import UpcomingSubscriptionCard from "@/components/UpcomingSubscriptionCard";
 import {
   HOME_BALANCE,
   HOME_SUBSCRIPTIONS,
-  HOME_USER,
   UPCOMING_SUBSCRIPTIONS,
 } from "@/constants/data";
 import { icons } from "@/constants/icons";
 import images from "@/constants/images";
 import "@/global.css";
 import { formatCurrency } from "@/lib/utils";
+import { useUser } from "@clerk/expo";
 import dayjs from "dayjs";
 import { BlurView } from "expo-blur";
 import { useState } from "react";
 import { FlatList, Image, Text, View } from "react-native";
 
-function HomeListHeader() {
+function HomeListHeader({ userName, avatarUrl }: { userName: string; avatarUrl: string | null }) {
   return (
     <>
       <View className="home-header">
         <View className="home-user">
-          <Image source={images.avatar} className="home-avatar" />
-          <Text className="home-user-name">{HOME_USER.name}</Text>
+          <Image
+            source={avatarUrl ? { uri: avatarUrl } : images.avatar}
+            className="home-avatar"
+          />
+          <Text className="home-user-name">{userName}</Text>
         </View>
 
         <View className="glass-icon-wrapper">
@@ -71,14 +74,18 @@ function ItemSeparator() {
 }
 
 export default function App() {
+  const { user } = useUser();
   const [expandedSubscriptionId, setExpandedSubscriptionId] = useState<
     string | null
   >(null);
 
+  const userName = user?.firstName || user?.emailAddresses?.[0]?.emailAddress || "User";
+  const avatarUrl = user?.imageUrl || null;
+
   return (
     <View className="flex-1 bg-background p-5">
       <FlatList
-        ListHeaderComponent={HomeListHeader}
+        ListHeaderComponent={<HomeListHeader userName={userName} avatarUrl={avatarUrl} />}
         data={HOME_SUBSCRIPTIONS}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
