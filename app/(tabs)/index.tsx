@@ -12,7 +12,7 @@ import { useSubscriptionStore } from "@/store/useSubscriptionStore";
 import { useUser } from "@clerk/expo";
 import dayjs from "dayjs";
 import { BlurView } from "expo-blur";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FlatList, Image, Pressable, Text, View } from "react-native";
 
 function HomeListHeader({
@@ -87,6 +87,32 @@ export default function App() {
   >(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const { subscriptions, addSubscription } = useSubscriptionStore();
+  const lastCapturedExpandedSubscriptionId = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (expandedSubscriptionId === null) {
+      lastCapturedExpandedSubscriptionId.current = null;
+      return;
+    }
+
+    if (
+      lastCapturedExpandedSubscriptionId.current === expandedSubscriptionId
+    ) {
+      return;
+    }
+
+    const expandedSubscription = subscriptions.find(
+      (subscription) => subscription.id === expandedSubscriptionId,
+    );
+    if (!expandedSubscription) return;
+
+    posthog?.capture("subscription_expanded", {
+      subscription_id: expandedSubscription.id,
+      billing_interval: expandedSubscription.billing ?? null,
+      subscription_status: expandedSubscription.status ?? null,
+    });
+    lastCapturedExpandedSubscriptionId.current = expandedSubscriptionId;
+  }, [expandedSubscriptionId, subscriptions]);
 
   const userName =
     user?.firstName || user?.emailAddresses?.[0]?.emailAddress || "User";
@@ -132,16 +158,9 @@ export default function App() {
             {...item}
             expanded={expandedSubscriptionId === item.id}
             onPress={() =>
-              setExpandedSubscriptionId((currentId) => {
-                if (currentId !== item.id) {
-                  posthog?.capture("subscription_expanded", {
-                    subscription_id: item.id,
-                    billing_interval: item.billing ?? null,
-                    subscription_status: item.status ?? null,
-                  });
-                }
-                return currentId === item.id ? null : item.id;
-              })
+              setExpandedSubscriptionId((currentId) =>
+                currentId === item.id ? null : item.id,
+              )
             }
           />
         )}

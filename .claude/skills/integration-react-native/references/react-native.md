@@ -775,7 +775,7 @@ posthog.register({
 
 The call above ensures that every event sent by the user will include `"icecream pref": "vanilla"` and `"team_id": 22`. This way, if you filtered events by property using `icecream_pref = vanilla`, it would display all events captured on that user after the `posthog.register` call, since they all include the specified Super Property.
 
-This does **not** set the user's properties. This only sets the properties for their events. To store person properties, see the [setting person properties section](#setting-user-properties).
+This does **not** set the user's properties. This only sets the properties for their events. To store person properties, see the [setting person properties section](#setting-person-properties).
 
 ### Removing stored super properties
 
@@ -915,7 +915,7 @@ const MyComponent = () => {
       // Do something
     }
     // Optional use the 'useFeatureFlagWithPayload' hook for fetching the feature flag payload
-    return <div/>
+    return null
 }
 ```
 
@@ -997,7 +997,7 @@ posthog.reloadFeatureFlags()
 
 ### Feature flag caching
 
-The React Native SDK caches feature flag values in AsyncStorage. Cached values persist indefinitely with no TTL until updated by a successful API call. This enables offline support and reduces latency, but means **inactive users may see stale flag values** from their last session.
+The React Native SDK caches feature flag values in the configured persistence storage. Cached values persist indefinitely with no TTL until updated by a successful API call. This enables offline support and reduces latency, but means **inactive users may see stale flag values** from their last session.
 
 For example, if a user last opened your app when a flag was `false`, that value remains cached even after you roll it out to 100%. When they reopen the app, the SDK returns the cached `false` first, then fetches the fresh `true` value from the API.
 
@@ -1364,7 +1364,7 @@ posthog.debug()
 
 ## Disabling for local development
 
-You may want to disable PostHog when working locally or in a test environment. You can do this by setting the `disable` option to `true` when initializing PostHog. Helpfully this allows you to continue using `usePostHog` and safely calling it without anything actually happening.
+You may want to disable PostHog when working locally or in a test environment. You can do this by setting the `disabled` option to `true` when initializing PostHog. Helpfully this allows you to continue using `usePostHog` and safely calling it without anything actually happening.
 
 React Native
 
@@ -1424,7 +1424,7 @@ await PostHog.setup('<ph_project_token>', {
 PostHog.capture("foo")
 // V2 Setup difference
 import PostHog from 'posthog-react-native'
-const posthog = await Posthog.initAsync('<ph_project_token>', {
+const posthog = await PostHog.initAsync('<ph_project_token>', {
     // usually 'https://us.i.posthog.com' or 'https://eu.i.posthog.com'
     host: 'https://us.i.posthog.com',
     // Add any other options here.

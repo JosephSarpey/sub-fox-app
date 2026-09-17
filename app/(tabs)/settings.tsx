@@ -38,8 +38,8 @@ export default function Settings() {
           onPress: async () => {
             setSigningOut(true);
             try {
-              posthog?.capture("user_signed_out");
               await signOut();
+              posthog?.capture("user_signed_out");
               // Auth guard in _layout.tsx handles redirect to sign-in
             } catch {
               Alert.alert("Error", "Failed to sign out. Please try again.");
