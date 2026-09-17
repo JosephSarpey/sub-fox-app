@@ -1,4 +1,5 @@
 import images from "@/constants/images";
+import { posthog } from "@/lib/posthog";
 import { useAuth, useUser } from "@clerk/expo";
 import dayjs from "dayjs";
 import { useState } from "react";
@@ -38,6 +39,7 @@ export default function Settings() {
             setSigningOut(true);
             try {
               await signOut();
+              posthog?.capture("user_signed_out");
               // Auth guard in _layout.tsx handles redirect to sign-in
             } catch {
               Alert.alert("Error", "Failed to sign out. Please try again.");

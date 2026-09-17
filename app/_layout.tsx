@@ -1,8 +1,10 @@
 import "@/global.css";
-import { ClerkProvider, useAuth } from "@clerk/expo";
+import { posthog } from "@/lib/posthog";
+import { ClerkProvider, useAuth, useUser } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
 import { useFonts } from "expo-font";
 import { SplashScreen, Stack, useRouter, useSegments } from "expo-router";
+import { PostHogErrorBoundary, PostHogProvider } from "posthog-react-native";
 import { useEffect, useRef } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -17,18 +19,37 @@ SplashScreen.preventAutoHideAsync();
 
 const InitialLayout = () => {
   const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded: isUserLoaded, user } = useUser();
   const segments = useSegments();
   const router = useRouter();
 
-  // Track whether we've done the initial auth check so we can distinguish
-  // "first load" (show spinner) from "signing out" (don't block navigation).
-  const hasInitialized = useRef(false);
+  const identifiedUserId = useRef<string | null>(null);
+  const wasSignedIn = useRef(false);
+
+  useEffect(() => {
+    if (!isLoaded || (isSignedIn && !isUserLoaded)) return;
+
+    if (isSignedIn && user?.id && identifiedUserId.current !== user.id) {
+      posthog?.identify(user.id, {
+        $set: {
+          ...(user.primaryEmailAddress?.emailAddress
+            ? { email: user.primaryEmailAddress.emailAddress }
+            : {}),
+          ...(user.firstName ? { first_name: user.firstName } : {}),
+          ...(user.lastName ? { last_name: user.lastName } : {}),
+        },
+      });
+      identifiedUserId.current = user.id;
+    } else if (!isSignedIn && wasSignedIn.current) {
+      posthog?.reset();
+      identifiedUserId.current = null;
+    }
+
+    wasSignedIn.current = isSignedIn;
+  }, [isLoaded, isSignedIn, isUserLoaded, user]);
 
   useEffect(() => {
     if (!isLoaded) return;
-
-    // Mark that Clerk has loaded at least once
-    hasInitialized.current = true;
 
     const inAuthGroup = segments[0] === "(auth)";
 
@@ -39,11 +60,16 @@ const InitialLayout = () => {
     }
   }, [isSignedIn, isLoaded, segments, router]);
 
-  // Only show the full-screen spinner on the very first load before Clerk
-  // has ever resolved — NOT during sign-out, which would cause a stuck screen.
-  if (!isLoaded && !hasInitialized.current) {
+  if (!isLoaded) {
     return (
-      <View style={{ flex: 1, backgroundColor: "#fff9e3", alignItems: "center", justifyContent: "center" }}>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: "#fff9e3",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
         <ActivityIndicator size="large" color="#ea7a53" />
       </View>
     );
@@ -70,10 +96,20 @@ export default function RootLayout() {
 
   if (!fontsLoaded) return null;
 
+  const content = <InitialLayout />;
+
   return (
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
       <SafeAreaProvider>
-        <InitialLayout />
+        {posthog ? (
+          <PostHogProvider client={posthog}>
+            <PostHogErrorBoundary fallback={() => null}>
+              {content}
+            </PostHogErrorBoundary>
+          </PostHogProvider>
+        ) : (
+          content
+        )}
       </SafeAreaProvider>
     </ClerkProvider>
   );

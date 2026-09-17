@@ -1,5 +1,6 @@
 import { useSignUp, useAuth } from "@clerk/expo";
 import { Link } from "expo-router";
+import { posthog } from "@/lib/posthog";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -176,6 +177,7 @@ export default function SignUpScreen() {
         return;
       }
 
+      posthog?.capture("sign_up_verification_sent");
       setPendingVerification(true);
       startCooldown(60);
     } catch (err: unknown) {
@@ -214,6 +216,8 @@ export default function SignUpScreen() {
         setErrorMsg(getSafeErrorMessage(finalizeError));
         return;
       }
+
+      posthog?.capture("account_created");
     } catch (err: unknown) {
       if (__DEV__) {
         console.warn("[Verify Error]", err);
