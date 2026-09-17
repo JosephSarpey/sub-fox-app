@@ -1,4 +1,5 @@
 import "@/global.css";
+import { posthog } from "@/lib/posthog";
 import { ClerkProvider, useAuth, useUser } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
 import { useFonts } from "expo-font";
@@ -7,7 +8,6 @@ import { PostHogErrorBoundary, PostHogProvider } from "posthog-react-native";
 import { useEffect, useRef } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { posthog } from "@/lib/posthog";
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
 
@@ -23,9 +23,6 @@ const InitialLayout = () => {
   const segments = useSegments();
   const router = useRouter();
 
-  // Track whether we've done the initial auth check so we can distinguish
-  // "first load" (show spinner) from "signing out" (don't block navigation).
-  const hasInitialized = useRef(false);
   const identifiedUserId = useRef<string | null>(null);
   const wasSignedIn = useRef(false);
 
@@ -54,9 +51,6 @@ const InitialLayout = () => {
   useEffect(() => {
     if (!isLoaded) return;
 
-    // Mark that Clerk has loaded at least once
-    hasInitialized.current = true;
-
     const inAuthGroup = segments[0] === "(auth)";
 
     if (isSignedIn && inAuthGroup) {
@@ -66,11 +60,16 @@ const InitialLayout = () => {
     }
   }, [isSignedIn, isLoaded, segments, router]);
 
-  // Only show the full-screen spinner on the very first load before Clerk
-  // has ever resolved — NOT during sign-out, which would cause a stuck screen.
-  if (!isLoaded && !hasInitialized.current) {
+  if (!isLoaded) {
     return (
-      <View style={{ flex: 1, backgroundColor: "#fff9e3", alignItems: "center", justifyContent: "center" }}>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: "#fff9e3",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
         <ActivityIndicator size="large" color="#ea7a53" />
       </View>
     );

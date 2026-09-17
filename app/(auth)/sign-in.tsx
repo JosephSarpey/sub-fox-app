@@ -1,6 +1,6 @@
-import { useSignIn, useAuth } from "@clerk/expo";
-import { Link } from "expo-router";
 import { posthog } from "@/lib/posthog";
+import { useAuth, useSignIn } from "@clerk/expo";
+import { Link } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
@@ -42,10 +42,12 @@ export default function SignInScreen() {
   const [emailAddress, setEmailAddress] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [code, setCode] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [fieldErrors, setFieldErrors] = useState<{
     email?: string;
     password?: string;
+    code?: string;
   }>({});
   const [loading, setLoading] = useState(false);
 
@@ -86,14 +88,33 @@ export default function SignInScreen() {
         return;
       }
 
-      const { error: finalizeError } = await signIn.finalize();
+      if (signIn.status === "complete") {
+        const { error: finalizeError } = await signIn.finalize();
 
-      if (finalizeError) {
-        setErrorMsg(getSafeErrorMessage(finalizeError));
-        return;
+        if (finalizeError) {
+          setErrorMsg(getSafeErrorMessage(finalizeError));
+          return;
+        }
+
+        posthog?.capture("sign_in_completed");
+      } else if (signIn.status === "needs_client_trust") {
+        const emailCodeFactor = signIn.supportedSecondFactors?.find(
+          (factor) => factor.strategy === "email_code",
+        );
+        if (emailCodeFactor) {
+          await signIn.mfa.sendEmailCode();
+        } else {
+          setErrorMsg(
+            "Device trust verification required but email verification is not supported.",
+          );
+        }
+      } else if (signIn.status === "needs_second_factor") {
+        setErrorMsg(
+          "Two-factor authentication is required but not yet supported in this app.",
+        );
+      } else {
+        setErrorMsg(`Sign in requires further action: ${signIn.status}`);
       }
-
-      posthog?.capture("sign_in_completed");
 
       // If successful, useAuth automatically updates and layout redirects
     } catch (err: unknown) {
@@ -106,11 +127,147 @@ export default function SignInScreen() {
     }
   };
 
+  const onVerifyPress = async () => {
+    if (!isLoaded) return;
+    if (!code.trim()) {
+      setFieldErrors({ code: "Code is required" });
+      return;
+    }
+
+    setErrorMsg("");
+    setLoading(true);
+
+    try {
+      await signIn.mfa.verifyEmailCode({ code: code.trim() });
+
+      if (signIn.status === "complete") {
+        const { error: finalizeError } = await signIn.finalize();
+
+        if (finalizeError) {
+          setErrorMsg(getSafeErrorMessage(finalizeError));
+          return;
+        }
+
+        posthog?.capture("sign_in_completed");
+      } else {
+        setErrorMsg(`Sign in requires further action: ${signIn.status}`);
+      }
+    } catch (err: unknown) {
+      if (__DEV__) {
+        console.warn("[Verify Error]", err);
+      }
+      setErrorMsg(getSafeErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!isLoaded) {
     return (
       <View className="flex-1 items-center justify-center bg-background">
         <ActivityIndicator size="large" color="#ea7a53" />
       </View>
+    );
+  }
+
+  if (signIn?.status === "needs_client_trust") {
+    return (
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <ScrollView
+          className="auth-screen auth-scroll"
+          contentContainerClassName="auth-content"
+          keyboardShouldPersistTaps="handled"
+        >
+          <View className="auth-brand-block">
+            <View className="auth-logo-wrap">
+              <View className="auth-logo-mark">
+                <Text className="auth-logo-mark-text">S</Text>
+              </View>
+              <View>
+                <Text className="auth-wordmark">SubFox</Text>
+                <Text className="auth-wordmark-sub">SMART BILLING</Text>
+              </View>
+            </View>
+
+            <Text className="auth-title">Verify new device</Text>
+            <Text className="auth-subtitle">
+              We&apos;ve sent a verification code to your email.
+            </Text>
+          </View>
+
+          <View className="auth-card">
+            <View className="auth-form">
+              <View className="auth-field">
+                <Text className="auth-label">Verification Code</Text>
+                <TextInput
+                  className={`auth-input ${fieldErrors.code ? "auth-input-error" : ""}`}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  value={code}
+                  placeholder="Enter code"
+                  placeholderTextColor="rgba(0,0,0,0.4)"
+                  onChangeText={(text) => {
+                    setCode(text);
+                    if (fieldErrors.code)
+                      setFieldErrors((p) => ({ ...p, code: undefined }));
+                  }}
+                  keyboardType="number-pad"
+                  returnKeyType="done"
+                  onSubmitEditing={onVerifyPress}
+                />
+                {fieldErrors.code ? (
+                  <Text className="auth-error">{fieldErrors.code}</Text>
+                ) : null}
+              </View>
+
+              {errorMsg ? <Text className="auth-error">{errorMsg}</Text> : null}
+
+              <Pressable
+                className={`auth-button ${loading ? "auth-button-disabled" : ""}`}
+                onPress={onVerifyPress}
+                disabled={loading}
+              >
+                <Text className="auth-button-text">
+                  {loading ? "Verifying..." : "Verify"}
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={async () => {
+                  setErrorMsg("");
+                  try {
+                    await signIn.mfa.sendEmailCode();
+                  } catch (err) {
+                    setErrorMsg(getSafeErrorMessage(err));
+                  }
+                }}
+                style={{ alignSelf: "center", marginTop: 8 }}
+              >
+                <Text className="auth-link">Resend Code</Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => {
+                  setErrorMsg("");
+                  setCode("");
+                  signIn.reset(); // Reset to go back to initial form
+                }}
+                style={{ alignSelf: "center", marginTop: 8 }}
+              >
+                <Text
+                  className="auth-link-copy"
+                  style={{ color: "rgba(0,0,0,0.5)" }}
+                >
+                  Use a different account
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     );
   }
 
@@ -155,7 +312,8 @@ export default function SignInScreen() {
                 placeholderTextColor="rgba(0,0,0,0.4)"
                 onChangeText={(text) => {
                   setEmailAddress(text);
-                  if (fieldErrors.email) setFieldErrors((p) => ({ ...p, email: undefined }));
+                  if (fieldErrors.email)
+                    setFieldErrors((p) => ({ ...p, email: undefined }));
                 }}
                 keyboardType="email-address"
                 textContentType="emailAddress"
@@ -180,7 +338,8 @@ export default function SignInScreen() {
                   autoComplete="password"
                   onChangeText={(text) => {
                     setPassword(text);
-                    if (fieldErrors.password) setFieldErrors((p) => ({ ...p, password: undefined }));
+                    if (fieldErrors.password)
+                      setFieldErrors((p) => ({ ...p, password: undefined }));
                   }}
                   textContentType="password"
                   returnKeyType="done"
@@ -197,11 +356,19 @@ export default function SignInScreen() {
                     bottom: 0,
                     justifyContent: "center",
                   }}
-                  accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+                  accessibilityLabel={
+                    showPassword ? "Hide password" : "Show password"
+                  }
                   accessibilityRole="button"
                   hitSlop={8}
                 >
-                  <Text style={{ fontSize: 14, color: "rgba(0,0,0,0.5)", fontFamily: "sans-semibold" }}>
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      color: "rgba(0,0,0,0.5)",
+                      fontFamily: "sans-semibold",
+                    }}
+                  >
                     {showPassword ? "Hide" : "Show"}
                   </Text>
                 </Pressable>
